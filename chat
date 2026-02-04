@@ -1,0 +1,362 @@
+// Chat Support Module
+const ChatModule = (function() {
+    // Chat Configuration
+    const chatConfig = {
+        supportName: 'BusinessPro Support',
+        supportAvatar: 'fas fa-headset',
+        autoResponseDelay: 1000,
+        maxMessages: 50
+    };
+    
+    // Chat State
+    let chatState = {
+        isOpen: false,
+        messages: [],
+        isTyping: false
+    };
+    
+    // DOM Elements
+    let chatElements = {};
+    
+    // Initialize Chat
+    function init() {
+        console.log('Chat module initializing...');
+        cacheChatElements();
+        loadChatHistory();
+        setupChatEventListeners();
+        
+        // Add welcome message if no messages exist
+        if (chatState.messages.length === 0) {
+            addSystemMessage('Hello! How can we help you today?');
+        }
+    }
+    
+    // Cache Chat Elements
+    function cacheChatElements() {
+        chatElements = {
+            chatToggle: document.getElementById('chatToggle'),
+            chatWindow: document.getElementById('chatWindow'),
+            closeChat: document.getElementById('closeChat'),
+            chatBody: document.getElementById('chatBody'),
+            chatInput: document.getElementById('chatInput'),
+            sendMessage: document.getElementById('sendMessage')
+        };
+    }
+    
+    // Load Chat History
+    function loadChatHistory() {
+        const savedChat = localStorage.getItem('businessProChatHistory');
+        if (savedChat) {
+            chatState.messages = JSON.parse(savedChat);
+        }
+        
+        renderChatMessages();
+    }
+    
+    // Save Chat History
+    function saveChatHistory() {
+        localStorage.setItem('businessProChatHistory', JSON.stringify(chatState.messages));
+    }
+    
+    // Setup Chat Event Listeners
+    function setupChatEventListeners() {
+        // Toggle chat window
+        if (chatElements.chatToggle) {
+            chatElements.chatToggle.addEventListener('click', toggleChat);
+        }
+        
+        // Close chat
+        if (chatElements.closeChat) {
+            chatElements.closeChat.addEventListener('click', closeChat);
+        }
+        
+        // Send message button
+        if (chatElements.sendMessage) {
+            chatElements.sendMessage.addEventListener('click', sendUserMessage);
+        }
+        
+        // Send message on Enter key
+        if (chatElements.chatInput) {
+            chatElements.chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendUserMessage();
+                }
+            });
+        }
+    }
+    
+    // Toggle Chat
+    function toggleChat() {
+        if (chatState.isOpen) {
+            closeChat();
+        } else {
+            openChat();
+        }
+    }
+    
+    // Open Chat
+    function openChat() {
+        if (chatElements.chatWindow) {
+            chatElements.chatWindow.style.display = 'flex';
+            chatState.isOpen = true;
+            
+            // Focus on input field
+            setTimeout(() => {
+                if (chatElements.chatInput) {
+                    chatElements.chatInput.focus();
+                }
+            }, 100);
+            
+            // Scroll to bottom
+            scrollToBottom();
+        }
+    }
+    
+    // Close Chat
+    function closeChat() {
+        if (chatElements.chatWindow) {
+            chatElements.chatWindow.style.display = 'none';
+            chatState.isOpen = false;
+        }
+    }
+    
+    // Send User Message
+    function sendUserMessage() {
+        if (!chatElements.chatInput) return;
+        
+        const message = chatElements.chatInput.value.trim();
+        if (!message) return;
+        
+        // Add user message
+        addUserMessage(message);
+        
+        // Clear input
+        chatElements.chatInput.value = '';
+        
+        // Show typing indicator
+        showTypingIndicator();
+        
+        // Generate auto-response after delay
+        setTimeout(() => {
+            removeTypingIndicator();
+            generateAutoResponse(message);
+        }, chatConfig.autoResponseDelay);
+    }
+    
+    // Add User Message
+    function addUserMessage(message) {
+        const messageObj = {
+            id: Date.now(),
+            type: 'user',
+            content: message,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: new Date().toISOString().split('T')[0]
+        };
+        
+        chatState.messages.push(messageObj);
+        
+        // Keep only last N messages
+        if (chatState.messages.length > chatConfig.maxMessages) {
+            chatState.messages.shift();
+        }
+        
+        saveChatHistory();
+        renderChatMessages();
+        scrollToBottom();
+    }
+    
+    // Add System Message
+    function addSystemMessage(message) {
+        const messageObj = {
+            id: Date.now(),
+            type: 'system',
+            content: message,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: new Date().toISOString().split('T')[0]
+        };
+        
+        chatState.messages.push(messageObj);
+        
+        // Keep only last N messages
+        if (chatState.messages.length > chatConfig.maxMessages) {
+            chatState.messages.shift();
+        }
+        
+        saveChatHistory();
+        renderChatMessages();
+        scrollToBottom();
+    }
+    
+    // Show Typing Indicator
+    function showTypingIndicator() {
+        chatState.isTyping = true;
+        renderChatMessages();
+        scrollToBottom();
+    }
+    
+    // Remove Typing Indicator
+    function removeTypingIndicator() {
+        chatState.isTyping = false;
+        renderChatMessages();
+    }
+    
+    // Generate Auto Response
+    function generateAutoResponse(userMessage) {
+        const responses = [
+            "Thanks for your message. Our support team will get back to you shortly.",
+            "I understand. Let me check that for you.",
+            "Can you provide more details about your issue?",
+            "We appreciate your feedback. Is there anything else we can help with?",
+            "I'll look into this and get back to you as soon as possible.",
+            "Have you checked our FAQ section for this issue?",
+            "Let me transfer you to a specialist who can help with that.",
+            "I need a bit more information to help you properly. Could you elaborate?"
+        ];
+        
+        // Simple keyword matching for more relevant responses
+        const lowerMessage = userMessage.toLowerCase();
+        let response;
+        
+        if (lowerMessage.includes('invoice') || lowerMessage.includes('payment')) {
+            response = "For invoice and payment inquiries, please provide your invoice number for faster assistance.";
+        } else if (lowerMessage.includes('login') || lowerMessage.includes('password')) {
+            response = "For login issues, please use the password reset feature or contact our admin team.";
+        } else if (lowerMessage.includes('refund') || lowerMessage.includes('return')) {
+            response = "Our refund policy allows returns within 30 days. Please provide your order details.";
+        } else if (lowerMessage.includes('bug') || lowerMessage.includes('error')) {
+            response = "I'm sorry you're experiencing issues. Could you describe the error message you're seeing?";
+        } else {
+            // Random response
+            response = responses[Math.floor(Math.random() * responses.length)];
+        }
+        
+        addSystemMessage(response);
+    }
+    
+    // Render Chat Messages
+    function renderChatMessages() {
+        if (!chatElements.chatBody) return;
+        
+        let messagesHTML = '';
+        
+        // Group messages by date
+        const messagesByDate = {};
+        chatState.messages.forEach(msg => {
+            const date = msg.date;
+            if (!messagesByDate[date]) {
+                messagesByDate[date] = [];
+            }
+            messagesByDate[date].push(msg);
+        });
+        
+        // Render messages
+        Object.keys(messagesByDate).forEach(date => {
+            // Add date separator
+            const today = new Date().toISOString().split('T')[0];
+            const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+            
+            let dateLabel = new Date(date).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            if (date === today) {
+                dateLabel = 'Today';
+            } else if (date === yesterday) {
+                dateLabel = 'Yesterday';
+            }
+            
+            messagesHTML += <div class="chat-date">${dateLabel}</div>;
+            
+            // Add messages for this date
+            messagesByDate[date].forEach(msg => {
+                const isUser = msg.type === 'user';
+                messagesHTML += `
+                    <div class="chat-message ${isUser ? 'sent' : 'received'}">
+                        ${!isUser ? <div class="chat-avatar"><i class="${chatConfig.supportAvatar}"></i></div> : ''}
+                        <div class="message-content">
+                            <div class="message-text">${escapeHTML(msg.content)}</div>
+                            <div class="message-time">${msg.timestamp}</div>
+                        </div>
+                        ${isUser ? <div class="chat-avatar"><i class="fas fa-user"></i></div> : ''}
+                    </div>
+                `;
+            });
+        });
+        
+        // Add typing indicator if active
+        if (chatState.isTyping) {
+            messagesHTML += `
+                <div class="chat-message received">
+                    <div class="chat-avatar"><i class="${chatConfig.supportAvatar}"></i></div>
+                    <div class="message-content">
+                        <div class="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        chatElements.chatBody.innerHTML = messagesHTML;
+    }
+    
+    // Scroll to Bottom
+    function scrollToBottom() {
+        if (chatElements.chatBody) {
+            chatElements.chatBody.scrollTop = chatElements.chatBody.scrollHeight;
+        }
+    }
+    
+    // Escape HTML (security)
+    function escapeHTML(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Clear Chat History
+    function clearChatHistory() {
+        if (confirm('Clear all chat history?')) {
+            chatState.messages = [];
+            saveChatHistory();
+            renderChatMessages();
+            addSystemMessage('Hello! How can we help you today?');
+        }
+    }
+    
+    // Export Chat History
+    function exportChatHistory() {
+        // Create a downloadable text file
+        let chatText = 'BusinessPro Support Chat History\n';
+        chatText += 'Generated on: ' + new Date().toLocaleString() + '\n\n';
+        
+        chatState.messages.forEach(msg => {
+            const sender = msg.type === 'user' ? 'You' : chatConfig.supportName;
+            chatText += [${msg.date} ${msg.timestamp}] ${sender}: ${msg.content}\n;
+        });
+        
+        const blob = new Blob([chatText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = chat-history-${new Date().toISOString().split('T')[0]}.txt;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
+    // Public API
+    return {
+        init: init,
+        openChat: openChat,
+        closeChat: closeChat,
+        clearChatHistory: clearChatHistory,
+        exportChatHistory: exportChatHistory
+    };
+})();
