@@ -1,0 +1,183 @@
+[21:18, 04/02/2026] Great Scammer Active Watsup: <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BusinessPro | Complete Business Management</title>
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+    <link rel="stylesheet" href="styles/admin.css">
+    <link rel="stylesheet" href="styles/responsive.css">
+    
+    <!-- External Libraries -->
+    <link rel="styles…
+[21:20, 04/02/2026] Great Scammer Active Watsup: /* Large Screens (1200px and up) */
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1400px;
+    }
+    
+    .charts-section {
+        grid-template-columns: 2fr 1fr;
+    }
+}
+
+/* Medium Screens (992px to 1199px) */
+@media (max-width: 1199px) {
+    .dashboard-layout {
+        grid-template-columns: 220px 1fr;
+    }
+    
+    .charts-section {
+        grid-template-columns: 1.5fr 1fr;
+    }
+}
+
+/* Tablet Screens (768px to 991px) */
+@media (max-width: 991px) {
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .sidebar {
+        position: static;
+        margin-bottom: 30px;
+    }
+    
+    .charts-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .financial-overview {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .admin-nav ul {
+        justify-content: center;
+    }
+    
+    .header-container {
+        flex-wrap: wrap;
+    }
+    
+    nav ul {
+        margin-top: 15px;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .user-actions {
+        margin-top: 15px;
+    }
+}
+
+/* Mobile Screens (576px to 767px) */
+@media (max-width: 767px) {
+    .financial-overview {
+        grid-template-columns: 1fr;
+    }
+    
+    .expense-categories {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .sync-options {
+        flex-direction: column;
+    }
+    
+    .view-options {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .view-btn {
+        text-align: center;
+    }
+    
+    .dashboard-nav ul {
+        justify-content: center;
+    }
+    
+    .admin-access-btn {
+        bottom: 80px;
+        right: 20px;
+    }
+    
+    .chat-window {
+        width: 300px;
+        height: 400px;
+    }
+}
+
+/* Small Mobile Screens (up to 575px) */
+@media (max-width: 575px) {
+    .container {
+        padding: 0 15px;
+    }
+    
+    .login-container,
+    .alert-container {
+        width: 95%;
+    }
+    
+    .expense-categories {
+        grid-template-columns: 1fr;
+    }
+    
+    .table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    nav ul {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    nav ul li {
+        margin-left: 0;
+    }
+    
+    .footer-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .chat-window {
+        width: 280px;
+        right: -10px;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .admin-access-btn,
+    .chat-support,
+    .dashboard-nav,
+    .user-actions,
+    footer {
+        display: none !important;
+    }
+    
+    body {
+        background-color: white;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    .table {
+        page-break-inside: auto;
+    }
+    
+    .table tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+}
