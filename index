@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BusinessPro | Complete Business Management</title>
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+    <link rel="stylesheet" href="styles/admin.css">
+    <link rel="stylesheet" href="styles/responsive.css">
+    
+    <!-- External Libraries -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header id="mainHeader">
+        <div class="container header-container">
+            <div class="logo">
+                <h1>Business<span>Pro</span></h1>
+            </div>
+            <nav id="mainNav">
+                <ul>
+                    <li><a href="#dashboard" class="nav-link active">Dashboard</a></li>
+                    <li><a href="#products" class="nav-link">Products</a></li>
+                    <li><a href="#invoices" class="nav-link">Invoices</a></li>
+                    <li><a href="#receivables" class="nav-link">Receivables</a></li>
+                    <li><a href="#expenses" class="nav-link">Expenses</a></li>
+                    <li><a href="#reports" class="nav-link">Reports</a></li>
+                </ul>
+            </nav>
+            <div class="user-actions">
+                <a href="#" id="userAccount"><i class="fas fa-user"></i> <span id="userName">Account</span></a>
+                <a href="#" class="notification-icon" id="notificationBtn">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-count" id="notificationCount">5</span>
+                </a>
+                <button class="btn-small" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dashboard Navigation -->
+    <div class="dashboard-nav" id="dashboardNav">
+        <div class="container">
+            <ul>
+                <li><a href="#" class="dashboard-nav-link active" data-view="overview">Financial Overview</a></li>
+                <li><a href="#" class="dashboard-nav-link" data-view="invoices">Invoice Tracking</a></li>
+                <li><a href="#" class="dashboard-nav-link" data-view="receivables">Receivables</a></li>
+                <li><a href="#" class="dashboard-nav-link" data-view="expenses">Expense Review</a></li>
+                <li><a href="#" class="dashboard-nav-link" data-view="reminders">Automated Reminders</a></li>
+                <li><a href="#" class="dashboard-nav-link" data-view="sync">Sync & Integrations</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container" id="mainContent">
+        <!-- Dashboard Views will be loaded here dynamically -->
+        <div id="dashboardViews"></div>
+    </main>
+
+    <!-- Chat Support -->
+    <div class="chat-support" id="chatSupport">
+        <div class="chat-btn" id="chatToggle">
+            <i class="fas fa-comment-dots"></i>
+        </div>
+        <div class="chat-window" id="chatWindow">
+            <div class="chat-header">
+                <h3>Customer Support</h3>
+                <button class="close-chat" id="closeChat">&times;</button>
+            </div>
+            <div class="chat-body" id="chatBody"></div>
+            <div class="chat-input">
+                <input type="text" id="chatInput" placeholder="Type your message...">
+                <button id="sendMessage"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Access Button -->
+    <div class="admin-access-btn" id="adminAccessBtn">
+        <i class="fas fa-user-shield"></i>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div class="admin-login-modal" id="adminLoginModal">
+        <!-- Content loaded from admin.js -->
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div class="admin-dashboard" id="adminDashboard">
+        <!-- Content loaded from admin.js -->
+    </div>
+
+    <!-- Notification Panel -->
+    <div class="notification-panel" id="notificationPanel">
+        <!-- Content loaded from main.js -->
+    </div>
+
+    <!-- Footer -->
+    <footer id="mainFooter">
+        <div class="container">
+            <!-- Footer content -->
+        </div>
+    </footer>
+
+    <!-- JavaScript Files -->
+    <script src="js/main.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/invoices.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/admin.js"></script>
+    
+    <!-- Initialize -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize all modules
+            if (typeof BusinessPro !== 'undefined') {
+                BusinessPro.init();
+            }
+        });
+    </script>
+</body>
+</html>
