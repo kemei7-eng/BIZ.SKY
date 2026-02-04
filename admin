@@ -1,0 +1,542 @@
+// Admin Security Module
+const AdminModule = (function() {
+    // Admin Configuration
+    const adminConfig = {
+        correctPasscode: "123456", // In production, use secure hashing
+        maxAttempts: 3,
+        lockoutTime: 30, // seconds
+        enableBruteForceProtection: true,
+        securityLogs: []
+    };
+    
+    // Admin State
+    let adminState = {
+        loginAttempts: 0,
+        isLocked: false,
+        lockoutEndTime: null,
+        isAdminLoggedIn: false,
+        securityEvents: []
+    };
+    
+    // DOM Elements
+    let adminElements = {};
+    
+    // Initialize Admin Module
+    function init() {
+        console.log('Admin module initializing...');
+        cacheAdminElements();
+        loadAdminState();
+        setupAdminEventListeners();
+        
+        // Check if admin is already logged in
+        checkAdminSession();
+    }
+    
+    // Cache Admin Elements
+    function cacheAdminElements() {
+        adminElements = {
+            adminAccessBtn: document.getElementById('adminAccessBtn'),
+            adminLoginModal: document.getElementById('adminLoginModal'),
+            adminDashboard: document.getElementById('adminDashboard'),
+            securityAlertModal: document.getElementById('securityAlertModal')
+        };
+    }
+    
+    // Load Admin State
+    function loadAdminState() {
+        const savedState = localStorage.getItem('businessProAdminState');
+        if (savedState) {
+            const parsedState = JSON.parse(savedState);
+            
+            // Check if lockout has expired
+            if (parsedState.isLocked && parsedState.lockoutEndTime) {
+                const now = new Date().getTime();
+                if (now > parsedState.lockoutEndTime) {
+                    parsedState.isLocked = false;
+                    parsedState.loginAttempts = 0;
+                }
+            }
+            
+            adminState = parsedState;
+        }
+        
+        updateAdminUI();
+    }
+    
+    // Save Admin State
+    function saveAdminState() {
+        localStorage.setItem('businessProAdminState', JSON.stringify(adminState));
+    }
+    
+    // Setup Admin Event Listeners
+    function setupAdminEventListeners() {
+        // Admin access button
+        if (adminElements.adminAccessBtn) {
+            adminElements.adminAccessBtn.addEventListener('click', openAdminLogin);
+        }
+        
+        // Admin login form would be set up when modal is opened
+    }
+    
+    // Open Admin Login
+    function openAdminLogin() {
+        if (adminState.isLocked) {
+            showSecurityAlert();
+            return;
+        }
+        
+        // Create login modal if it doesn't exist
+        if (!adminElements.adminLoginModal) {
+            createAdminLoginModal();
+        }
+        
+        adminElements.adminLoginModal.style.display = 'flex';
+        
+        // Focus on passcode input
+        const passcodeInput = document.getElementById('adminPasscode');
+        if (passcodeInput) {
+            setTimeout(() => {
+                passcodeInput.focus();
+            }, 100);
+        }
+        
+        updateAttemptsUI();
+    }
+    
+    // Create Admin Login Modal
+    function createAdminLoginModal() {
+        const modalHTML = `
+            <div class="login-container">
+                <div class="login-header">
+                    <h2><i class="fas fa-user-shield"></i> Admin Access</h2>
+                    <p>Enter your secure passcode to continue</p>
+                    <button class="close-login" id="closeLogin">&times;</button>
+                </div>
+                
+                <div class="login-body">
+                    <div class="login-form">
+                        <div class="form-group">
+                            <label for="adminUsername">Admin Username</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="adminUsername" class="form-control" 
+                                       value="admin" readonly>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="adminPasscode">Secure Passcode</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="adminPasscode" class="form-control" 
+                                       placeholder="Enter 6-digit passcode" maxlength="6" 
+                                       inputmode="numeric">
+                            </div>
+                            <div class="error-message" id="passcodeError"></div>
+                            <div class="success-message" id="passcodeSuccess"></div>
+                        </div>
+                        
+                        <div class="attempts-monitor" id="attemptsMonitor" style="display: none;">
+                            <p><i class="fas fa-exclamation-triangle"></i> 
+                               <strong>Security Alert:</strong> 
+                               <span id="remainingAttempts">${adminConfig.maxAttempts}</span> 
+                               attempts remaining before lockout.
+                            </p>
+                        </div>
+                        
+                        <button class="login-btn" id="loginBtn">Access Admin Panel</button>
+                    </div>
+                    
+                    <div class="security-info">
+                        <p><i class="fas fa-info-circle"></i> 
+                           For security, this admin panel is protected with brute force detection. 
+                           Multiple failed attempts will trigger a security alert.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="login-footer">
+                    <p>Authorized personnel only. All access is logged.</p>
+                </div>
+            </div>
+        `;
+        
+        // Create modal container if it doesn't exist
+        if (!adminElements.adminLoginModal) {
+            const modal = document.createElement('div');
+            modal.className = 'admin-login-modal';
+            modal.id = 'adminLoginModal';
+            modal.innerHTML = modalHTML;
+            document.body.appendChild(modal);
+            adminElements.adminLoginModal = modal;
+        } else {
+            adminElements.adminLoginModal.innerHTML = modalHTML;
+        }
+        
+        // Setup modal event listeners
+        setupLoginModalEvents();
+    }
+    
+    // Setup Login Modal Events
+    function setupLoginModalEvents() {
+        // Close button
+        const closeBtn = document.getElementById('closeLogin');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeAdminLogin);
+        }
+        
+        // Login button
+        const loginBtn = document.getElementById('loginBtn');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', attemptAdminLogin);
+        }
+        
+        // Passcode input
+        const passcodeInput = document.getElementById('adminPasscode');
+        if (passcodeInput) {
+            // Only allow numbers
+            passcodeInput.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                
+                // Clear error messages
+                const errorEl = document.getElementById('passcodeError');
+                const successEl = document.getElementById('passcodeSuccess');
+                if (errorEl) errorEl.style.display = 'none';
+                if (successEl) successEl.style.display = 'none';
+            });
+            
+            // Submit on Enter key
+            passcodeInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    attemptAdminLogin();
+                }
+            });
+        }
+    }
+    
+    // Attempt Admin Login
+    function attemptAdminLogin() {
+        const passcodeInput = document.getElementById('adminPasscode');
+        const errorEl = document.getElementById('passcodeError');
+        const successEl = document.getElementById('passcodeSuccess');
+        const loginBtn = document.getElementById('loginBtn');
+        
+        if (!passcodeInput || !errorEl || !successEl || !loginBtn) return;
+        
+        const enteredPasscode = passcodeInput.value.trim();
+        
+        // Validate passcode length
+        if (enteredPasscode.length !== 6) {
+            showAdminError('Please enter a 6-digit passcode');
+            return;
+        }
+        
+        // Check if system is locked
+        if (adminState.isLocked) {
+            showSecurityAlert();
+            return;
+        }
+        
+        // Verify passcode
+        if (enteredPasscode === adminConfig.correctPasscode) {
+            // Successful login
+            adminState.loginAttempts = 0;
+            adminState.isAdminLoggedIn = true;
+            saveAdminState();
+            
+            // Show success message
+            successEl.textContent = 'Login successful! Redirecting...';
+            successEl.style.display = 'block';
+            errorEl.style.display = 'none';
+            
+            // Disable login button
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+            
+            // Add security event
+            addSecurityEvent('SUCCESSFUL_LOGIN', 'Admin login successful');
+            
+            // Redirect to admin dashboard after delay
+            setTimeout(() => {
+                closeAdminLogin();
+                openAdminDashboard();
+                passcodeInput.value = '';
+                successEl.style.display = 'none';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Access Admin Panel';
+            }, 1000);
+            
+        } else {
+            // Failed login
+            adminState.loginAttempts++;
+            
+            // Add security event
+            addSecurityEvent('FAILED_LOGIN', Failed login attempt #${adminState.loginAttempts});
+            
+            // Check if max attempts reached
+            if (adminState.loginAttempts >= adminConfig.maxAttempts && 
+                adminConfig.enableBruteForceProtection) {
+                // Lock the system
+                lockAdminSystem();
+                showSecurityAlert();
+            } else {
+                // Show error message
+                const attemptsLeft = adminConfig.maxAttempts - adminState.loginAttempts;
+                showAdminError(Invalid passcode. ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining.);
+                
+                // Shake animation for incorrect input
+                passcodeInput.classList.add('error');
+                setTimeout(() => {
+                    passcodeInput.classList.remove('error');
+                }, 500);
+                
+                // Clear passcode field
+                passcodeInput.value = '';
+                passcodeInput.focus();
+            }
+            
+            saveAdminState();
+            updateAttemptsUI();
+        }
+    }
+    
+    // Show Admin Error
+    function showAdminError(message) {
+        const errorEl = document.getElementById('passcodeError');
+        const successEl = document.getElementById('passcodeSuccess');
+        
+        if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+        
+        if (successEl) {
+            successEl.style.display = 'none';
+        }
+    }
+    
+    // Update Attempts UI
+    function updateAttemptsUI() {
+        const attemptsMonitor = document.getElementById('attemptsMonitor');
+        const remainingAttempts = document.getElementById('remainingAttempts');
+        
+        if (attemptsMonitor && remainingAttempts) {
+            if (adminState.loginAttempts > 0) {
+                const attemptsLeft = adminConfig.maxAttempts - adminState.loginAttempts;
+                remainingAttempts.textContent = attemptsLeft;
+                attemptsMonitor.style.display = 'block';
+            } else {
+                attemptsMonitor.style.display = 'none';
+            }
+        }
+    }
+    
+    // Lock Admin System
+    function lockAdminSystem() {
+        adminState.isLocked = true;
+        const now = new Date().getTime();
+        adminState.lockoutEndTime = now + (adminConfig.lockoutTime * 1000);
+        saveAdminState();
+        
+        // Add security event
+        addSecurityEvent('SYSTEM_LOCKOUT', 
+            System locked due to ${adminConfig.maxAttempts} failed login attempts);
+        
+        // Update admin button
+        updateAdminUI();
+    }
+    
+    // Unlock Admin System
+    function unlockAdminSystem() {
+        adminState.isLocked = false;
+        adminState.loginAttempts = 0;
+        adminState.lockoutEndTime = null;
+        saveAdminState();
+        
+        // Add security event
+        addSecurityEvent('SYSTEM_UNLOCKED', 'System lockout period expired');
+        
+        // Update admin button
+        updateAdminUI();
+    }
+    
+    // Show Security Alert
+    function showSecurityAlert() {
+        // Create security alert modal if it doesn't exist
+        if (!adminElements.securityAlertModal) {
+            createSecurityAlertModal();
+        }
+        
+        adminElements.securityAlertModal.style.display = 'flex';
+        
+        // Start countdown timer
+        let timeLeft = adminConfig.lockoutTime;
+        const lockoutTimer = document.getElementById('lockoutTimer');
+        const acknowledgeBtn = document.getElementById('alertAcknowledge');
+        
+        if (lockoutTimer) {
+            lockoutTimer.textContent = timeLeft;
+        }
+        
+        if (acknowledgeBtn) {
+            acknowledgeBtn.disabled = true;
+            acknowledgeBtn.textContent = 'Acknowledge';
+        }
+        
+        const timerInterval = setInterval(() => {
+            timeLeft--;
+            
+            if (lockoutTimer) {
+                lockoutTimer.textContent = timeLeft;
+            }
+            
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                
+                // Unlock the system
+                unlockAdminSystem();
+                
+                // Enable acknowledge button
+                if (acknowledgeBtn) {
+                    acknowledgeBtn.disabled = false;
+                    acknowledgeBtn.textContent = 'System Unlocked - Acknowledge';
+                }
+            }
+        }, 1000);
+        
+        // Setup acknowledge button
+        if (acknowledgeBtn) {
+            acknowledgeBtn.onclick = closeSecurityAlert;
+        }
+    }
+    
+    // Create Security Alert Modal
+    function createSecurityAlertModal() {
+        const alertHTML = `
+            <div class="alert-container">
+                <div class="alert-header">
+                    <h2><i class="fas fa-exclamation-triangle"></i> SECURITY ALERT</h2>
+                </div>
+                
+                <div class="alert-body">
+                    <div class="alert-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    
+                    <div class="alert-message">
+                        <p><strong>Multiple Failed Login Attempts Detected!</strong></p>
+                        <p>Someone has attempted to access the admin panel with incorrect credentials multiple times.</p>
+                        <p>This could be a brute force attack attempt.</p>
+                    </div>
+                    
+                    <div class="alert-timer">
+                        <p>System locked for: <span id="lockoutTimer">${adminConfig.lockoutTime}</span> seconds</p>
+                    </div>
+                    
+                    <p style="font-size: 0.9rem; color: #777;">The system will automatically unlock after the timer expires.</p>
+                </div>
+                
+                <div class="alert-footer">
+                    <button class="alert-btn" id="alertAcknowledge" disabled>Acknowledge</button>
+                </div>
+            </div>
+        `;
+        
+        // Create modal container if it doesn't exist
+        if (!adminElements.securityAlertModal) {
+            const modal = document.createElement('div');
+            modal.className = 'security-alert-modal';
+            modal.id = 'securityAlertModal';
+            modal.innerHTML = alertHTML;
+            document.body.appendChild(modal);
+            adminElements.securityAlertModal = modal;
+        } else {
+            adminElements.securityAlertModal.innerHTML = alertHTML;
+        }
+    }
+    
+    // Close Security Alert
+    function closeSecurityAlert() {
+        if (adminElements.securityAlertModal) {
+            adminElements.securityAlertModal.style.display = 'none';
+        }
+    }
+    
+    // Close Admin Login
+    function closeAdminLogin() {
+        if (adminElements.adminLoginModal) {
+            adminElements.adminLoginModal.style.display = 'none';
+        }
+        
+        // Clear passcode field
+        const passcodeInput = document.getElementById('adminPasscode');
+        if (passcodeInput) {
+            passcodeInput.value = '';
+        }
+        
+        // Clear error messages
+        const errorEl = document.getElementById('passcodeError');
+        const successEl = document.getElementById('passcodeSuccess');
+        if (errorEl) errorEl.style.display = 'none';
+        if (successEl) successEl.style.display = 'none';
+    }
+    
+    // Open Admin Dashboard
+    function openAdminDashboard() {
+        // Create admin dashboard if it doesn't exist
+        if (!adminElements.adminDashboard) {
+            createAdminDashboard();
+        }
+        
+        adminElements.adminDashboard.style.display = 'block';
+        loadAdminDashboardData();
+    }
+    
+    // Create Admin Dashboard
+    function createAdminDashboard() {
+        const dashboardHTML = `
+            <div class="admin-header">
+                <h1><i class="fas fa-user-shield"></i> Admin Control Panel</h1>
+                <button class="logout-btn" id="adminLogout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+            
+            <div class="admin-nav">
+                <ul>
+                    <li><a href="#" class="active" data-admin-section="dashboard">Dashboard</a></li>
+                    <li><a href="#" data-admin-section="users">User Management</a></li>
+                    <li><a href="#" data-admin-section="security">Security Logs</a></li>
+                    <li><a href="#" data-admin-section="settings">System Settings</a></li>
+                    <li><a href="#" data-admin-section="reports">Admin Reports</a></li>
+                </ul>
+            </div>
+            
+            <div class="admin-main">
+                <!-- Sections will be loaded dynamically -->
+                <div id="adminDashboardContent"></div>
+            </div>
+        `;
+        
+        // Create dashboard container if it doesn't exist
+        if (!adminElements.adminDashboard) {
+            const dashboard = document.createElement('div');
+            dashboard.className = 'admin-dashboard';
+            dashboard.id = 'adminDashboard';
+            dashboard.innerHTML = dashboardHTML;
+            document.body.appendChild(dashboard);
+            adminElements.adminDashboard = dashboard;
+        } else {
+            adminElements.adminDashboard.innerHTML = dashboardHTML;
+        }
+        
+        // Setup dashboard event listeners
+        setupAdminDashboardEvents();
+    }
+    
+    // Setup Admin Dashboard Events
+    function setupAdminDashboardEvents() {
+        // Logout button
+        const logoutBtn = document.getElementById('adminLogout');
+        if (logoutBtn) {
+            logoutBtn.addEventListener
